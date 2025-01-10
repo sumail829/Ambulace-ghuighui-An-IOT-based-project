@@ -13,12 +13,23 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myproject.reactnative",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app requires access to your location to display ambulance locations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app requires access to your location to display ambulance locations."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.myproject.reactnative",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCSLm2ipOWjy3WfwUbpJobOyr7wRBNSqgg"
+        }
       }
     },
     "web": {
