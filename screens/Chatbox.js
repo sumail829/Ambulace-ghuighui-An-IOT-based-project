@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,86 +11,110 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native";
-import { useUser } from "../context/UserContext"; // Import the context
+import { useUser } from "../context/UserContext"; // Import user context
+import io from "socket.io-client"; // Import socket.io-client
 
 export default function Chatbox() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const { user } = useUser(); // Access user data from context
-  const fullName = user.name || "John Doe";  // Default to "John Doe" if fullName is unavailable
-  const token = user?.token;  // Access the token from the user context
+  const fullName = user.name || "John Doe"; // Default to "John Doe" if fullName is unavailable
+  const token = user?.token; // Access the token from user context
 
-  // Fetch messages from the API
+  const SERVER_URL = "https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app"; // Replace with your server's URL
+  const flatListRef = useRef(null); // Ref for FlatList
+  const [socket, setSocket] = useState(null);
+  const [isAtBottom, setIsAtBottom] = useState(true); // Track if we are at the bottom of the chat
+
+  // Fetch messages when component mounts
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const response = await fetch(
-          "https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app/api/chat/messages",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,  // Include the token in the Authorization header
-            },
-          }
-        );
+        const response = await fetch(`${SERVER_URL}/api/chat/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`, // Include the token in Authorization header
+          },
+        });
+
         const data = await response.json();
-        console.log("Fetched messages:", data);  // Log API response for debugging
+        console.log("Fetched messages:", data);
+
         if (data && Array.isArray(data)) {
-          // Map API data to match the local state structure
           const formattedMessages = data.map((msg) => ({
             id: msg._id,
             text: msg.text,
             fullName: msg.fullName,
-            sentByMe: msg.fullName === fullName, // Adjust logic to match logged-in user
+            sentByMe: msg.fullName === fullName,
           }));
           setMessages(formattedMessages);
         }
       } catch (error) {
-        console.log("Failed to fetch messages:", error);
+        console.error("Failed to fetch messages:", error);
       }
     };
 
     fetchMessages();
-  }, [fullName, token]); // Re-fetch messages when fullName or token changes
+  }, [token, fullName]);
 
-  // Add new message to the list and send the message to the backend
-  const sendMessage = async () => {
-    if (message.trim() !== "") {
+  // WebSocket setup
+  useEffect(() => {
+    const newSocket = io(SERVER_URL, {
+      transports: ["websocket"], // Use WebSocket as the transport protocol
+      query: { token }, // Pass token for authentication if necessary
+    });
+
+    setSocket(newSocket);
+
+    // Listen for new messages
+    newSocket.on("chat message", (newMessage) => {
+      console.log("New message received:", newMessage);
+
+      setMessages((prevMessages) => {
+        if (prevMessages.some((msg) => msg.id === newMessage._id)) {
+          return prevMessages; // Prevent duplicate message
+        }
+        return [
+          ...prevMessages,
+          {
+            id: newMessage._id,
+            text: newMessage.text,
+            fullName: newMessage.fullName,
+            sentByMe: newMessage.fullName === fullName,
+          },
+        ];
+      });
+
+      // Scroll to bottom when a new message is received, but only if we are at the bottom
+      if (isAtBottom) {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [token, fullName, isAtBottom]);
+
+  const sendMessage = () => {
+    if (message.trim() !== "" && socket) {
       const newMessage = {
-        id: Date.now().toString(),
+        fullName,
         text: message,
-        fullName: fullName,
-        sentByMe: true,
       };
 
-      // Add message to local state
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      // Emit message to server
+      socket.emit("chat message", newMessage);
 
-      // Send POST request to backend
-      try {
-        const response = await fetch(
-          "https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app/api/chat/message",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,  // Include the token in the Authorization header
-            },
-            body: JSON.stringify({
-              fullName: fullName, // Use the actual fullName from context
-              text: message, // Use the input field's value
-            }),
-          }
-        );
-
-        const result = await response.json();
-        console.log("Message sent successfully:", result);
-
-        // Clear input field after sending message
-        setMessage("");
-      } catch (error) {
-        console.log("Failed to send message:", error);
-      }
+      // Clear input field
+      setMessage("");
     }
+  };
+
+  const handleScroll = (contentOffset, contentHeight) => {
+    // Check if we're close to the bottom of the list
+    const isCloseToBottom = contentOffset.y + contentHeight === contentHeight;
+    setIsAtBottom(isCloseToBottom);
   };
 
   return (
@@ -102,6 +126,7 @@ export default function Chatbox() {
         <View style={styles.container}>
           <View style={styles.chatWrapper}>
             <FlatList
+              ref={flatListRef} // Reference for FlatList
               data={messages}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
@@ -111,12 +136,13 @@ export default function Chatbox() {
                     item.sentByMe ? styles.myMessage : styles.theirMessage,
                   ]}
                 >
-                  {/* Display the full name above the message */}
                   <Text style={styles.senderName}>{item.fullName}</Text>
                   <Text
                     style={[
                       styles.messageText,
-                      item.sentByMe ? styles.myMessageText : styles.theirMessageText,
+                      item.sentByMe
+                        ? styles.myMessageText
+                        : styles.theirMessageText,
                     ]}
                   >
                     {item.text}
@@ -124,6 +150,13 @@ export default function Chatbox() {
                 </View>
               )}
               contentContainerStyle={styles.chatContainer}
+              onContentSizeChange={() =>
+                flatListRef.current?.scrollToEnd({ animated: false })
+              }
+              onScroll={({ nativeEvent }) => {
+                const { contentOffset, contentSize } = nativeEvent;
+                handleScroll(contentOffset, contentSize.height);
+              }}
             />
           </View>
           <View style={styles.inputContainer}>
@@ -150,21 +183,19 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   chatWrapper: {
-    flex: 1,
+    flex: 1, // Ensure the chat container takes up remaining space
     marginTop: 20,
     padding: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 10,
     backgroundColor: "#f9f9f9",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: "#000", // Shadow color
+    shadowOffset: { width: 0, height: 2 }, // Offset of the shadow
+    shadowOpacity: 0.2, // Opacity of the shadow
+    shadowRadius: 4, // Radius of the shadow
   },
   chatContainer: {
-    flexGrow: 1,
+    flexGrow: 1, // Ensure the content grows to allow scrolling
+    paddingBottom: 10, // Add some space at the bottom for the last message
   },
   messageContainer: {
     marginBottom: 10,
