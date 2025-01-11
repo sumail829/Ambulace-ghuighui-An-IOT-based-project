@@ -33,8 +33,9 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Dashboard" component={Dashboard} />
       <Tab.Screen name="Traffic Location" component={TrafficLocation} />
-      <Tab.Screen name="Chatbox" component={Chatbox} />
+      <Tab.Screen name="Chatbox" component={Chatbox} options={{ headerShown: false }} />
       <Tab.Screen name="Profile" component={Profile} />
+      
     </Tab.Navigator>
   );
 }

@@ -1,20 +1,40 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, StyleSheet, Alert } from "react-native";
 import { Text } from "react-native-paper";
+import { useUser } from "../context/UserContext"; // Adjust the path
 
 const LoginPage = ({ navigation, setIsLoggedIn }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { setUser } = useUser(); // Access setUser to store user details
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please enter both email and password.");
       return;
     }
 
-    // Simulate a login process
-    Alert.alert("Success", `Login successful for: ${email}`);
-    setIsLoggedIn(true); // Update the state to navigate to Main
+    try {
+      const response = await fetch(
+        "https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Invalid email or password");
+      }
+
+      const data = await response.json();
+      setUser(data.user); // Save the user data (including name, email, phone)
+      setIsLoggedIn(true); // Update logged-in state
+      // navigation.navigate("Dashboard"); // Navigate to Dashboard after login
+    } catch (error) {
+      Alert.alert("Login Failed", error.message);
+    }
   };
 
   return (
@@ -42,7 +62,6 @@ const LoginPage = ({ navigation, setIsLoggedIn }) => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
