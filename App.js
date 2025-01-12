@@ -1,86 +1,89 @@
 import React, { useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import TabNavigator from "./navigation/TabNavigator";
-import LoginPage from "./screens/LoginPage"; // Correct path if necessary
-import SignUpPage from "./screens/SignUpPage"; // Correct path if necessary
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import { UserProvider } from "./context/UserContext"; // Adjust the path as needed
+// Screens
+import LoginPage from "./screens/LoginPage";
+import SignUpPage from "./screens/SignUpPage";
+import VerifyOtp from "./screens/VerifyOtp";
+import Dashboard from "./screens/Dashboard";
+import TrafficLocation from "./screens/TrafficLocation";
+import Chatbox from "./screens/Chatbox";
+import Profile from "./screens/Profile";
+
+// Context
+import { UserProvider } from './context/UserContext'; // Import the UserProvider
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login status
+
+  // Tab Navigator
+  const RenderTabNavigator = () => (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
+          if (route.name === "Traffic Location") {
+            iconName = "location";
+          } else if (route.name === "Dashboard") {
+            iconName = "home";
+          } else if (route.name === "Chatbox") {
+            iconName = "chatbubble";
+          } else if (route.name === "Profile") {
+            iconName = "person";
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: "blue",
+        tabBarInactiveTintColor: "gray",
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={Dashboard} options={{ headerShown: false }} />
+      <Tab.Screen name="Traffic Location" component={TrafficLocation} options={{ headerShown: false }} />
+      <Tab.Screen name="Chatbox" component={Chatbox} options={{ headerShown: false }} />
+      <Tab.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
+    </Tab.Navigator>
+  );
 
   return (
     <UserProvider>
-    <NavigationContainer>
-      <Stack.Navigator>
-        {isLoggedIn ? (
-          <>
-            {/* Main tab navigation */}
-            <Stack.Screen
-              name="Main"
-              component={TabNavigator}
-              options={{ headerShown: false }}
-            />
-            {/* Add the Chat screen here */}
-            {/* <Stack.Screen
-              name="Chat"
-              component={Chat}
-              options={({ route }) => ({ title: `Chat with ${route.params.fullname}` })}
-            /> */}
-          </>
-        ) : (
-          <>
-            {/* Login and SignUp screens */}
-            <Stack.Screen
-              name="Login"
-              options={{ headerShown: false }}
-            >
-              {({ navigation }) => (
-                <LoginPage navigation={navigation} setIsLoggedIn={setIsLoggedIn} />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="SignUp"
-              options={{ headerShown: false }}
-            >
-              {({ navigation }) => (
-                <SignUpPage navigation={navigation} setIsLoggedIn={setIsLoggedIn} />
-              )}
-            </Stack.Screen>
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+      <NavigationContainer>
+        <Stack.Navigator>
+          {/* Login Screen */}
+          <Stack.Screen
+            name="Login"
+            options={{ headerShown: false }}
+          >
+            {(props) => <LoginPage {...props} setIsLoggedIn={setIsLoggedIn} />}
+          </Stack.Screen>
+
+          {/* Sign-Up Screen */}
+          <Stack.Screen
+            name="SignUp"
+            component={SignUpPage}
+            options={{ headerShown: true, title: "Sign Up" }}
+          />
+
+          {/* Verify OTP Screen */}
+          <Stack.Screen
+            name="VerifyOtp"
+            component={VerifyOtp}
+            options={{ headerShown: true, title: "Verify OTP" }}
+          />
+
+          {/* Main App (Tab Navigator) */}
+          <Stack.Screen
+            name="Main"
+            component={RenderTabNavigator}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
     </UserProvider>
   );
 }
-// import React from "react";
-// import { NavigationContainer } from "@react-navigation/native";
-// import { createStackNavigator } from "@react-navigation/stack";
-// import { SafeAreaView } from "react-native-safe-area-context";
-// import { Text } from "react-native";
-
-// const Stack = createStackNavigator();
-
-// const HomeScreen = () => <Text>Home Screen</Text>;
-
-// const NavigationStack = () => {
-//   return (
-//     <Stack.Navigator>
-//       <Stack.Screen name="Home" component={HomeScreen} />
-//     </Stack.Navigator>
-//   );
-// };
-
-// export default () => {
-//   return (
-//     <SafeAreaView style={{ flex: 1 }}>
-//       <NavigationContainer>
-//         <NavigationStack />
-//       </NavigationContainer>
-//     </SafeAreaView>
-//   );
-// };

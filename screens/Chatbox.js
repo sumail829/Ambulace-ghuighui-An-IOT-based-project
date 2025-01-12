@@ -21,8 +21,10 @@ export default function Chatbox() {
   const fullName = user.name || "John Doe"; // Default to "John Doe" if fullName is unavailable
   const token = user?.token; // Access the token from user context
 
-  const SERVER_URL = "https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app"; // Replace with your server's URL
+  const SERVER_URL = "https://723a-110-44-118-28.ngrok-free.app"; // Replace with your server's URL
   const flatListRef = useRef(null); // Ref for FlatList
+
+  //https://cf48-2405-acc0-1307-2b25-00-5.ngrok-free.app
   const [socket, setSocket] = useState(null);
   const [isAtBottom, setIsAtBottom] = useState(true); // Track if we are at the bottom of the chat
 

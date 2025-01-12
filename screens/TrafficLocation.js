@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import { View, Text, StyleSheet, Alert, ImageBackground, Dimensions } from "react-native";
+
+// Get screen dimensions
+const { width, height } = Dimensions.get("window");
 
 export default function TrafficLocation() {
   const [ambulanceDirection, setAmbulanceDirection] = useState(""); // Direction of ambulance
   const [lights, setLights] = useState({
-    north: "red",
+    north: "yellow",
     south: "red",
     east: "red",
     west: "red",
@@ -20,49 +23,61 @@ export default function TrafficLocation() {
       handleTrafficLights(direction);
     };
 
-    const interval = setInterval(simulateAmbulance,5000000); // Simulate every 5 seconds
+    const interval = setInterval(simulateAmbulance, 50000); // Simulate every 5 seconds
     return () => clearInterval(interval);
-}, []);      ambulanceDirection
+  }, []);
 
   const handleTrafficLights = (direction) => {
-    // Turn all lights red, then make the ambulance's direction green
-    setLights({
-      north: "red",
-      south: "red",
-      east: "red",
-      west: "red",
-      [direction]: "green",
+    setLights((prevLights) => {
+      // If the light is already yellow or red, turn it green
+      if (prevLights[direction] === "yellow" || prevLights[direction] === "red") {
+        return {
+          ...prevLights,
+          north: "red",
+          south: "red",
+          east: "red",
+          west: "red",
+          [direction]: "green", // Turn the ambulance's direction green
+        };
+      }
+      // Otherwise, maintain the current state
+      return prevLights;
     });
   };
 
   return (
-    <View style={styles.container}>
-      {/* Compass */}
-      <View style={styles.compassContainer}>
-        <Text style={styles.compassText}>
-          Ambulance Coming from: {ambulanceDirection.toUpperCase() || "N/A"}
-        </Text>
-      </View>
-
-      {/* Roads */}
-      <View style={styles.roadContainer}>
-        <View style={styles.roadRow}>
-          <TrafficLight color={lights.north} />
+    <ImageBackground
+      source={require("../assets/road3.jpg")} // Replace with the correct path to your road image
+      style={styles.background}
+    >
+      <View style={styles.container}>
+        {/* Compass */}
+        <View style={styles.compassContainer}>
+          <Text style={styles.compassText}>
+            Ambulance Coming from: {ambulanceDirection.toUpperCase() || "N/A"}
+          </Text>
         </View>
 
-        <View style={styles.roadRow}>
-          <TrafficLight color={lights.west} />
-          <View style={styles.compass}>
-            <Text style={styles.compassTitle}>🚔 Compass</Text>
+        {/* Roads */}
+        <View style={styles.roadContainer}>
+          <View style={styles.roadRow}>
+            <TrafficLight color={lights.north} />
           </View>
-          <TrafficLight color={lights.east} />
-        </View>
 
-        <View style={styles.roadRow}>
-          <TrafficLight color={lights.south} />
+          <View style={styles.roadRow}>
+            <TrafficLight color={lights.west} />
+            <View style={styles.compass}>
+              <Text style={styles.compassTitle}>🚔 Compass</Text>
+            </View>
+            <TrafficLight color={lights.east} />
+          </View>
+
+          <View style={styles.roadRow}>
+            <TrafficLight color={lights.south} />
+          </View>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -78,9 +93,16 @@ const TrafficLight = ({ color }) => {
 };
 
 const styles = StyleSheet.create({
+  background: {
+    width: width, // Full screen width
+    height:height, // Full screen height
+    resizeMode: "center", // Ensures the image scales properly
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f0f0f0",
+    opacity: 0.8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -93,9 +115,10 @@ const styles = StyleSheet.create({
   compassText: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "green",
   },
   roadContainer: {
-    width: "80%",
+    width: "60%",
     height: "60%",
     justifyContent: "center",
     alignItems: "center",
